@@ -6,7 +6,7 @@ import pickle
 import logging
 import numpy as np
 
-# Set up logging
+# Set up logging 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -15,17 +15,17 @@ app = FastAPI()
 class HeartAttackPrediction(BaseModel): 
     Age: int
     Sex: int
+    BP:int
     Cholesterol: int
-    Diabetes: int
-    Smoking: int
-    Obesity: int
-    Alcoholic: int
-    EHPW: int
-    SHPD: int
+    FBS_over_120: int
+    Max_HR: int
+    Exercise_angina: int
+    ST_depression: float
+    
 
 # Load the model
 try:
-    with open('heart_attack_model.pkl', 'rb') as f:
+    with open('heart_attack_model2.pkl', 'rb') as f:
         model = pickle.load(f)
     logger.info("Model loaded successfully.")
 except FileNotFoundError:
