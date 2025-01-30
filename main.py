@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
 import pickle
@@ -12,16 +13,28 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+# Enable CORS to allow requests from your frontend
+origins = [
+    "https://heartpredictorsaas-production.up.railway.app"  # Add your frontend URL
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Allows requests from your frontend only
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allows all headers
+)
+
 class HeartAttackPrediction(BaseModel): 
     Age: int
     Sex: int
-    BP:int
+    BP: int
     Cholesterol: int
     FBS_over_120: int
     Max_HR: int
     Exercise_angina: int
     ST_depression: float
-    
 
 # Load the model
 try:
