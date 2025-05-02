@@ -15,7 +15,10 @@ app = FastAPI()
 
 # Enable CORS to allow requests from your frontend
 origins = [
-    "https://heartpredictorsaas-production.up.railway.app"  # Add your frontend URL
+    "https://quackex.com",
+    "http://quackex.com",
+    "https://www.quackex.com",
+    "http://www.quackex.com"  # Add your frontend URL
 ]
 
 app.add_middleware(
