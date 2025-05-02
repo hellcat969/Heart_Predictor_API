@@ -1,32 +1,31 @@
-import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from mangum import Mangum
 import pandas as pd
 import pickle
 import logging
 import numpy as np
+import os
 
-# Set up logging 
+# Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Enable CORS to allow requests from your frontend
-origins = [
-    "https://aethermedix.vercel.app"  # Add your frontend URL
-]
-
+# CORS
+origins = ["https://aethermedix.vercel.app"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Allows requests from your frontend only
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-class HeartAttackPrediction(BaseModel): 
+# Input model
+class HeartAttackPrediction(BaseModel):
     Age: int
     Sex: int
     BP: int
@@ -36,44 +35,35 @@ class HeartAttackPrediction(BaseModel):
     Exercise_angina: int
     ST_depression: float
 
-# Load the model
+# Load model once per cold start
+model_path = os.path.join(os.path.dirname(__file__), "..", "heart_attack_model2.pkl")
 try:
-    with open('heart_attack_model2.pkl', 'rb') as f:
+    with open(model_path, "rb") as f:
         model = pickle.load(f)
     logger.info("Model loaded successfully.")
-except FileNotFoundError:
-    logger.error("Model file not found")
-    raise HTTPException(status_code=500, detail="Model file not found")
 except Exception as e:
-    logger.error(f"Error loading model: {str(e)}")
-    raise HTTPException(status_code=500, detail="Error loading model")
+    logger.error(f"Error loading model: {e}")
+    model = None  # Prevent crash; will raise on prediction
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Heart Predictor API"}
+    return {"message": "Heart Predictor API is live."}
 
 @app.post("/predict")
 def predict_risk(features: HeartAttackPrediction):
+    if model is None:
+        raise HTTPException(status_code=500, detail="Model not loaded.")
+    
     try:
-        # Log the received features
-        logger.info(f"Received features: {features}")
-        
-        # Convert input to DataFrame
         data = pd.DataFrame([features.dict()])
-        
-        # Predict using the loaded model
         prediction = model.predict(data)
         result = prediction[0]
-        
-        # Ensure the result is converted to a native Python type
         if isinstance(result, np.generic):
             result = result.item()
-        
-        logger.info(f"Predicted risk factor: {result}")
         return {"risk_factor": result}
     except Exception as e:
-        logger.error(f"Error making prediction: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=400, detail="Prediction failed.")
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# Needed for Vercel
+handler = Mangum(app)
